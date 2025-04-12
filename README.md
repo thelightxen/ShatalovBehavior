@@ -9,7 +9,7 @@ The project includes a founder class (as AActor) and **UBehavior** itself.
 #### UBehavior has the following main functions:
 - **RunBehavior** - Running a new task
 - **FinishBehavior** - Finishes the task
-- **SetIsInterrupted**- Prevents all tasks from finishing before the task (including the current one) in which IsInterrupted was set
+- **SetIsInterrupted** - Prevents all tasks from finishing before the task (including the current one) in which IsInterrupted was set
 - **Ready** - Starts the task if it's not started yet.
 - **BehStart** (Activate)
 - **BehTick** (TickTask)

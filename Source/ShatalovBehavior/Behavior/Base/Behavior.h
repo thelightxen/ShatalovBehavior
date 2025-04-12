@@ -11,7 +11,7 @@ UENUM(BlueprintType)
 enum EBehaviorType
 {
 	BT_Default UMETA(DisplayName = "Default", ToolTip = "Default task"),
-	BT_Parallel UMETA(DisplayName = "Parallel", ToolTip = "Parallel task, can be finished when the owner task is completed."),
+	BT_Parallel UMETA(DisplayName = "Parallel", ToolTip = "Parallel task, runs separately from the main thread."),
 	BT_Base UMETA(DisplayName = "Base", ToolTip="A task that contains an array of Default tasks, can call them in random order.")
 };
 
@@ -146,6 +146,7 @@ public:
 
 private:
 	void SelectBehavior();
+	bool CanExecuteBehavior(const FBehaviorData& Behavior);
 
 	FBehaviorData LastSelected;
 	int32 RepeatCount = 0, MaxRandomRepeat = 0, SelectedIndex = 0;

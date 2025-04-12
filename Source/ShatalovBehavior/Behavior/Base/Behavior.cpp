@@ -182,7 +182,7 @@ void UBehavior::SelectBehavior()
 
 		// Sum weight
 		for (const FBehaviorData& BehData : Behaviors)
-			if (BehData.CurrentCooldown == 0.f) // replace with a separate pure function
+			if (CanExecuteBehavior(BehData))
 				TotalWeight += BehData.RandomWeight;
 
 		if (TotalWeight <= 0.f)
@@ -196,8 +196,7 @@ void UBehavior::SelectBehavior()
 		float AccumulatedWeight = 0.f;
 		for (int i = 0; i < Behaviors.Num(); i++)
 		{
-			if (!(Behaviors[i].CurrentCooldown == 0.f && (Behaviors[i].MaxPerStage != Behaviors[i].CurrentPerStage ||
-					Behaviors[i].MaxPerStage == 0))) // move it to a separate pure function
+			if (!CanExecuteBehavior(Behaviors[i]))
 				continue;
 			
 			AccumulatedWeight += Behaviors[i].RandomWeight;
@@ -215,4 +214,10 @@ void UBehavior::SelectBehavior()
 	}
 	else if (Behaviors.Num() == 0)
 		UE_LOG(LogBehavior, Error, TEXT("Behavior Type is BT_Base, but Behaviors array is empty: %s"), *GetFullName());
+}
+
+bool UBehavior::CanExecuteBehavior(const FBehaviorData& Behavior)
+{
+	return (Behavior.CurrentCooldown == 0.f && (Behavior.MaxPerStage != Behavior.CurrentPerStage ||
+					Behavior.MaxPerStage == 0));
 }

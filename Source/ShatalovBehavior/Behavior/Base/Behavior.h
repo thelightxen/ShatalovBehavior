@@ -115,7 +115,7 @@ public: // Blueprints
 
 public:
 	UFUNCTION(BlueprintCallable, Category = Behavior)
-		UBehavior* RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady);
+		UBehavior* RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady = true);
 
 	UFUNCTION(BlueprintCallable, Category = Behavior)
 		void FinishBehavior();
@@ -137,6 +137,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = Behavior)
 		UBehavior* GetBehaviorOwner();
+		
+	// Returns the last Behavior (for example, if state is "BehMain -> BehAction -> BehAnim", the function will return a reference to BehAnim).
+	UFUNCTION(BlueprintCallable)
+        	UBehavior* GetLastBehavior();
 
 	UFUNCTION(BlueprintPure, DisplayName = "IsOwnedByTasksComponent", Category = Behavior)
 		bool BehaviorIsOwnedByTasksComponent() const { return IsOwnedByTasksComponent(); };

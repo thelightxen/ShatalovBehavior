@@ -95,23 +95,25 @@ void UBehavior::FinishBehavior()
 	if (IsValid(this))
 	{
 		OnFinishBehavior();
-		if (IsValid(GetParentBehavior()))
+		
+		UBehavior* Parent = GetParentBehavior();
+		if (IsValid(Parent))
 		{
-			GetParentBehavior()->OnChildFinish(GetClass());
+			Parent->OnChildFinish(GetClass());
 
-			if (GetParentBehavior()->Type == BT_Base && GetParentBehavior()->GetChildBehavior() == this)
+			if (Parent->Type == BT_Base && Parent->GetChildBehavior() == this)
 			{
-				if (GetParentBehavior()->RepeatCount < GetParentBehavior()->MaxRandomRepeat)
+				if (Parent->RepeatCount <Parent->MaxRandomRepeat)
 				{
-					GetParentBehavior()->RepeatCount++;
-					UBehavior* NewBeh = GetParentBehavior()->RunBehavior(
-						GetParentBehavior()->Behaviors[GetParentBehavior()->SelectedIndex].Behavior, true);
+					Parent->RepeatCount++;
+					UBehavior* NewBeh = Parent->RunBehavior(
+						Parent->Behaviors[Parent->SelectedIndex].Behavior, true);
 				}
 				else
 				{
 					// Cooldown after end repeat
-					GetParentBehavior()->Behaviors[GetParentBehavior()->SelectedIndex].CurrentCooldown =
-						GetParentBehavior()->Behaviors[GetParentBehavior()->SelectedIndex].Cooldown;
+					Parent->Behaviors[Parent->SelectedIndex].CurrentCooldown =
+						Parent->Behaviors[Parent->SelectedIndex].Cooldown;
 				}
 			}
 		}
@@ -163,6 +165,13 @@ UBehavior* UBehavior::GetBehaviorOwner()
 	else if (BehaviorIsOwnedByTasksComponent())
 		return this;
 	else return nullptr;
+}
+
+UBehavior* UBehavior::GetLastBehavior()
+{
+	if (IsValid(GetChildBehavior()))
+		return GetChildBehavior()->GetLastBehavior();
+	else return this;
 }
 
 void UBehavior::Ready()

@@ -90,34 +90,39 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 	return BehNew;
 }
 
+void UBehavior::OnDestroy(bool bInOwnerFinished)
+{
+	OnFinishBehavior();
+		
+	UBehavior* Parent = GetParentBehavior();
+	if (IsValid(Parent))
+	{
+		Parent->OnChildFinish(GetClass());
+
+		if (Parent->Type == BT_Base && Parent->GetChildBehavior() == this)
+		{
+			if (Parent->RepeatCount < Parent->MaxRandomRepeat)
+			{
+				Parent->RepeatCount++;
+				UBehavior* NewBeh = Parent->RunBehavior(
+					Parent->Behaviors[Parent->SelectedIndex].Behavior, true);
+			}
+			else
+			{
+				// Cooldown after end repeat
+				Parent->Behaviors[Parent->SelectedIndex].CurrentCooldown =
+					Parent->Behaviors[Parent->SelectedIndex].Cooldown;
+			}
+		}
+	}
+	
+	Super::OnDestroy(bInOwnerFinished);
+}
+
 void UBehavior::FinishBehavior()
 {
 	if (IsValid(this))
 	{
-		OnFinishBehavior();
-		
-		UBehavior* Parent = GetParentBehavior();
-		if (IsValid(Parent))
-		{
-			Parent->OnChildFinish(GetClass());
-
-			if (Parent->Type == BT_Base && Parent->GetChildBehavior() == this)
-			{
-				if (Parent->RepeatCount <Parent->MaxRandomRepeat)
-				{
-					Parent->RepeatCount++;
-					UBehavior* NewBeh = Parent->RunBehavior(
-						Parent->Behaviors[Parent->SelectedIndex].Behavior, true);
-				}
-				else
-				{
-					// Cooldown after end repeat
-					Parent->Behaviors[Parent->SelectedIndex].CurrentCooldown =
-						Parent->Behaviors[Parent->SelectedIndex].Cooldown;
-				}
-			}
-		}
-			
 		EndTask();
 	}
 	else UE_LOG(LogBehavior, Warning, TEXT("The task is already finished or invalid: %s)."), *GetFullName());
@@ -179,6 +184,29 @@ void UBehavior::Ready()
 	if (GetState() == EGameplayTaskState::AwaitingActivation)
 		ReadyForActivation();
 	else UE_LOG(LogBehavior, Error, TEXT("Cannot set state: Ready (for %s)."), *GetFullName());
+}
+
+TArray<UBehavior*> UBehavior::GetParallelBehaviors()
+{
+	TArray<UBehavior*> Result;
+	if (GetGameplayTasksComponent())
+		for (auto Task = GetGameplayTasksComponent()->GetKnownTaskIterator(); Task; ++Task)
+		{
+			UBehavior* BehCast = Cast<UBehavior>(*Task);
+			if (IsValid(BehCast) && BehCast->Type == BT_Parallel)
+				Result.Add(BehCast);
+		}
+	return Result;
+}
+
+class AAIController* UBehavior::GetAIController()
+{
+	APawn* PawnOwner = Cast<APawn>(GetOwnerActor());
+	if (IsValid(PawnOwner))
+	{
+		return Cast<AAIController>(PawnOwner->GetController());
+	}
+	else return nullptr;
 }
 
 void UBehavior::SelectBehavior()

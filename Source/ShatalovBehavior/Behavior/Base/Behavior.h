@@ -4,8 +4,25 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTask.h"
-#include "Navigation/PathFollowingComponent.h"
+#include "AIController.h"
 #include "Behavior.generated.h"
+
+/**
+ * \brief safe-delay for UBehavior
+ * \param DelayTime The delay time in seconds.
+ * \param LambdaBody The code to execute. It can be a single expression (for example, `myFunction();`) or a block (`{ ... }`).
+ */
+#define BehDelay(DelayTime, LambdaBody) \
+		do { \
+			FTimerHandle TimerHandle; \
+			TWeakObjectPtr<std::decay<decltype(*this)>::type> WeakThis(this); \
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [&, WeakThis]() { \
+				if (WeakThis.IsValid()) \
+				{ \
+				LambdaBody; \
+				} \
+			}, DelayTime, false); \
+		} while(0)
 
 UENUM(BlueprintType)
 enum EBehaviorType
@@ -69,6 +86,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		TEnumAsByte<EBehaviorType> Type = BT_Default;
 
+	/**
+	 * If the priority is lower (or equal) than the new task, the old task is completed and the new one is started.
+	 * If the priority is higher, the new task is added to the queue and waits for the previous task to finish.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		uint8 Priority = 127;
 	
@@ -85,6 +106,7 @@ public:
 	UBehavior(const FObjectInitializer& ObjectInitializer);
 	virtual void Activate() override;
 	virtual void TickTask(float DeltaTime) override;
+	virtual void OnDestroy(bool bInOwnerFinished) override;
 	
 public: // Blueprints
 	// Called when the task starts
@@ -95,6 +117,7 @@ public: // Blueprints
 	UFUNCTION(BlueprintImplementableEvent, DisplayName="BehTick", Category = Behavior)
 		void BehTick(float DeltaTime);
 
+	// For current Behavior
 	UFUNCTION(BlueprintNativeEvent, Category = Behavior)
 		void OnFinishBehavior();
 		virtual void OnFinishBehavior_Implementation() {};
@@ -109,6 +132,7 @@ public: // Blueprints
 		void OnChildFinish(TSubclassOf<UBehavior> Behavior);
 		virtual void OnChildFinish_Implementation(TSubclassOf<UBehavior> Behavior) {};
 
+	// Work with UBehAnim
 	UFUNCTION(BlueprintNativeEvent, Category = Behavior)
 		void OnAnimationFinished(UAnimSequence* Animation);
 		virtual void OnAnimationFinished_Implementation(UAnimSequence* Animation) {};
@@ -129,12 +153,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Behavior)
 		TArray<FString> GetDebugHierarchi();
 
+	// Get reference to parent Behavior
 	UFUNCTION(BlueprintPure, Category = Behavior)
 		UBehavior* GetParentBehavior();
 
+	// Get reference to child Behavior
 	UFUNCTION(BlueprintPure, Category = Behavior)
 		UBehavior* GetChildBehavior();
 
+	// Returns the first Behavior (for example, if state is "BehMain -> BehAction -> BehAnim", the function will return a reference to BehMain).
 	UFUNCTION(BlueprintPure, Category = Behavior)
 		UBehavior* GetBehaviorOwner();
 		
@@ -145,8 +172,15 @@ public:
 	UFUNCTION(BlueprintPure, DisplayName = "IsOwnedByTasksComponent", Category = Behavior)
 		bool BehaviorIsOwnedByTasksComponent() const { return IsOwnedByTasksComponent(); };
 
+	// Activate Behavior
 	UFUNCTION(BlueprintCallable, Category = Behavior)
 		void Ready();
+
+	UFUNCTION(BlueprintCallable, Category = Behavior)
+		TArray<UBehavior*> GetParallelBehaviors();
+
+	UFUNCTION(BlueprintCallable, Category = Behavior)
+		class AAIController* GetAIController();
 
 private:
 	void SelectBehavior();

@@ -1,7 +1,7 @@
 # ShatalovBehavior
 > Developed with **Unreal Engine 4.27**
 
-This is a super very basic task system that was used in the Hello Neighbor game from Prototype to Release. Originally developed by **Anton Shatalov**.
+This is a super very basic task system that was used in the Hello Neighbor game from Prototype to Release. Originally developed by [**Anton Shatalov**](https://dev.epicgames.com/community/profile/bL9nq/BingoBongo).
 The system is created on the **UGameplayTask** class, instead of UObject as in Hello Neighbor (due to the absence of UGameplayTask in UE4.8).
 ## Project
 The project includes a founder class (as AActor) and **UBehavior** itself.

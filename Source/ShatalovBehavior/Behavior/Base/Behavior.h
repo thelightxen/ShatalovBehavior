@@ -32,6 +32,14 @@ enum EBehaviorType
 	BT_Base UMETA(DisplayName = "Base", ToolTip="A task that contains an array of Default tasks, can call them in random order.")
 };
 
+UENUM(BlueprintType)
+enum EBehaviorResult
+{
+	BR_Success UMETA(DisplayName = "Success", ToolTip = "Task executed successfully."),
+	BR_Failed UMETA(DisplayName = "Failed", ToolTip = "Failed while executing task."),
+	BR_Skipped UMETA(DisplayName = "Skipped", ToolTip = "Task was skipped.")
+};
+
 USTRUCT(BlueprintType)
 struct FBehaviorData
 {
@@ -106,7 +114,6 @@ public:
 	UBehavior(const FObjectInitializer& ObjectInitializer);
 	virtual void Activate() override;
 	virtual void TickTask(float DeltaTime) override;
-	virtual void OnDestroy(bool bInOwnerFinished) override;
 	
 public: // Blueprints
 	// Called when the task starts
@@ -119,8 +126,8 @@ public: // Blueprints
 
 	// For current Behavior
 	UFUNCTION(BlueprintNativeEvent, Category = Behavior)
-		void OnFinishBehavior();
-		virtual void OnFinishBehavior_Implementation() {};
+		void OnBehaviorFinished(EBehaviorResult Result, const FString& FailedCode);
+		virtual void OnBehaviorFinished_Implementation(EBehaviorResult Result, const FString& FailedCode) {};
 
 	// Check any completed BehMove
 	UFUNCTION(BlueprintNativeEvent, Category = Behavior)
@@ -129,8 +136,8 @@ public: // Blueprints
 
 	// Child Behavior has finished.
 	UFUNCTION(BlueprintNativeEvent, Category = Behavior)
-		void OnChildFinish(TSubclassOf<UBehavior> Behavior);
-		virtual void OnChildFinish_Implementation(TSubclassOf<UBehavior> Behavior) {};
+		void OnChildBehaviorFinished(TSubclassOf<UBehavior> Behavior, EBehaviorResult Result, const FString& FailedCode);
+		virtual void OnChildBehaviorFinished_Implementation(TSubclassOf<UBehavior> Behavior, EBehaviorResult Result, const FString& FailedCode) {};
 
 	// Work with UBehAnim
 	UFUNCTION(BlueprintNativeEvent, Category = Behavior)
@@ -142,7 +149,7 @@ public:
 		UBehavior* RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady = true);
 
 	UFUNCTION(BlueprintCallable, Category = Behavior)
-		void FinishBehavior();
+		void FinishBehavior(TEnumAsByte<EBehaviorResult> Result, const FString& FailedCode = "");
 
 	UFUNCTION(BlueprintCallable, Category = Behavior)
 		void SetIsInterrupted(bool IsInterrupted);
@@ -169,6 +176,10 @@ public:
 	UFUNCTION(BlueprintCallable)
         	UBehavior* GetLastBehavior();
 
+	// Get the next task
+	UFUNCTION(BlueprintCallable)
+		UBehavior* GetBehaviorInQueue() { return TaskQueue; };
+
 	UFUNCTION(BlueprintPure, DisplayName = "IsOwnedByTasksComponent", Category = Behavior)
 		bool BehaviorIsOwnedByTasksComponent() const { return IsOwnedByTasksComponent(); };
 
@@ -180,7 +191,7 @@ public:
 		TArray<UBehavior*> GetParallelBehaviors();
 
 	UFUNCTION(BlueprintCallable, Category = Behavior)
-		class AAIController* GetAIController();
+		AAIController* GetAIController();
 
 private:
 	void SelectBehavior();
@@ -189,4 +200,22 @@ private:
 	FBehaviorData LastSelected;
 	int32 RepeatCount = 0, MaxRandomRepeat = 0, SelectedIndex = 0;
 	bool bSelectingTask;
+
+	TEnumAsByte<EBehaviorResult> FinishResult = BR_Skipped;
+	FString FinishFailedCode;
+	bool bOwnedByBase;
+
+protected:
+
+	template<typename T>
+	FString EnumToString(const FString& enumName, const T value)
+	{
+		UEnum* pEnum = FindObject<UEnum>(ANY_PACKAGE, *enumName);
+		return *(pEnum ? pEnum->GetNameStringByIndex(static_cast<uint8>(value)) : "null");
+	}
+
+public:
+	// Move to Location implementation.
+	UFUNCTION(BlueprintCallable)
+		void RunBehMove(FVector TargetLocation, float AcceptanceRadius = 10.f);
 };

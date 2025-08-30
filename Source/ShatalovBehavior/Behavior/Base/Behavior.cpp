@@ -1,9 +1,10 @@
 ﻿// (c) XenFFly
 
 #include "Behavior.h"
-
+#include "BehMove.h"
 #include "GameplayTasksComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+
 
 DEFINE_LOG_CATEGORY(LogBehavior);
 
@@ -59,7 +60,9 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 		UE_LOG(LogBehavior, Error, TEXT("Behavior is invalid: %s)."), *GetFullName());
 		return nullptr;
 	}
+	
 	UBehavior* BehNew = NewObject<UBehavior>(this, Behavior);
+	
 	switch (BehNew->Type)
 	{
 	case BT_Parallel:
@@ -70,13 +73,24 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 	case BT_Default:
 		if (!IsValid(GetChildBehavior()) || (!GetChildBehavior()->IsInterrupted() && BehNew->Priority <= GetChildBehavior()->Priority))
 		{
+			if (IsValid(GetChildBehavior()))
+				GetChildBehavior()->FinishBehavior(BR_Skipped, "OverrideTask");
+			
 			BehNew->InitTask(*this, BehNew->Priority);
 			if (bReady)
 				BehNew->ReadyForActivation();
 		}
-		else TaskQueue = BehNew;
+		else if (IsValid(GetChildBehavior()) && (GetChildBehavior()->IsInterrupted() || BehNew->Priority < GetChildBehavior()->Priority))
+			TaskQueue = BehNew;
 		break;
 	case BT_Base:
+		if (!GetBehaviorOwner())
+			break;
+		
+		UBehavior* BehaviorBase = GetBehaviorOwner()->GetChildBehavior();
+		if (IsValid(BehaviorBase) && BehaviorBase->GetState() != EGameplayTaskState::Finished)
+			BehaviorBase->FinishBehavior(BR_Skipped, "OverrideTask");
+		
 		if (!IsInterrupted())
 		{
 			BehNew->InitTask(*GetBehaviorOwner(), BehNew->Priority);
@@ -90,16 +104,16 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 	return BehNew;
 }
 
-void UBehavior::OnDestroy(bool bInOwnerFinished)
+void UBehavior::FinishBehavior(TEnumAsByte<EBehaviorResult> Result, const FString& FailedCode)
 {
-	OnFinishBehavior();
-		
+	OnBehaviorFinished(FinishResult, FinishFailedCode);
+	
 	UBehavior* Parent = GetParentBehavior();
 	if (IsValid(Parent))
 	{
-		Parent->OnChildFinish(GetClass());
+		Parent->OnChildBehaviorFinished(GetClass(), FinishResult, *FinishFailedCode);
 
-		if (Parent->Type == BT_Base && Parent->GetChildBehavior() == this)
+		if (Parent->Type == BT_Base && Parent->GetChildBehavior() == this && bOwnedByBase)
 		{
 			if (Parent->RepeatCount < Parent->MaxRandomRepeat)
 			{
@@ -115,14 +129,17 @@ void UBehavior::OnDestroy(bool bInOwnerFinished)
 			}
 		}
 	}
-	
-	Super::OnDestroy(bInOwnerFinished);
-}
 
-void UBehavior::FinishBehavior()
-{
-	if (IsValid(this))
+	UBehavior* Child = GetChildBehavior();
+	if (IsValid(Child))
 	{
+		Child->FinishBehavior(BR_Skipped, "BehAbort");
+	}
+	
+	if (IsValid(this) && GetState() != EGameplayTaskState::Finished)
+	{
+		FinishResult = Result;
+		FinishFailedCode = FailedCode;
 		EndTask();
 	}
 	else UE_LOG(LogBehavior, Warning, TEXT("The task is already finished or invalid: %s)."), *GetFullName());
@@ -242,7 +259,9 @@ void UBehavior::SelectBehavior()
 				SelectedIndex = i;
 				MaxRandomRepeat = UKismetMathLibrary::RandomIntegerInRange(0, Behaviors[i].MaxRandRepeat);
 				RepeatCount = 0;
-				RunBehavior(Behaviors[i].Behavior, true);
+				UBehavior* BehRandom = RunBehavior(Behaviors[i].Behavior, false);
+				BehRandom->bOwnedByBase = true;
+				BehRandom->Ready();
 				Behaviors[i].CurrentPerStage++;
 				bSelectingTask = false;
 				return;
@@ -257,4 +276,12 @@ bool UBehavior::CanExecuteBehavior(const FBehaviorData& Behavior)
 {
 	return (Behavior.CurrentCooldown == 0.f && (Behavior.MaxPerStage != Behavior.CurrentPerStage ||
 					Behavior.MaxPerStage == 0));
+}
+
+void UBehavior::RunBehMove(FVector TargetLocation, float AcceptanceRadius)
+{
+	UBehMove* BehMove = Cast<UBehMove>(RunBehavior(UBehMove::StaticClass(), false));
+	BehMove->TargetLocation = TargetLocation;
+	BehMove->AcceptanceRadius = AcceptanceRadius;
+	BehMove->Ready();
 }

@@ -30,7 +30,7 @@ UBehavior also includes a **prioritization system**, where lower priority tasks 
 
 # Documentation (WIP)
 ### Content:
-- [Delays](#Delays)
+- [Delays](#delays)
 - [Binding/Unbinding delegates](#bindingunbinding-delegates)
 - [FinishBehavior with Result](#finishbehavior-with-result)
 - [Behavior Owner (Actor)](#behavior-owner-actor)

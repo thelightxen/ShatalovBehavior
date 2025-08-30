@@ -13,7 +13,11 @@ class SHATALOVBEHAVIOR_API ABehaviorOwner : public AActor
 
 public:
 	ABehaviorOwner();
+	
 	virtual void BeginPlay() override;
+	virtual void Destroyed() override; // Very important
+
+	
 	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(VisibleInstanceOnly, DisplayName="GameplayTasksComponent")

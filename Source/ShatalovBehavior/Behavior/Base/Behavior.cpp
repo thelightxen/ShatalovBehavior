@@ -1,6 +1,7 @@
 ﻿// (c) XenFFly
 
 #include "Behavior.h"
+
 #include "BehMove.h"
 #include "GameplayTasksComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -106,6 +107,11 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 
 void UBehavior::FinishBehavior(TEnumAsByte<EBehaviorResult> Result, const FString& FailedCode)
 {
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearAllTimersForObject(this);
+	}
+	
 	OnBehaviorFinished(FinishResult, FinishFailedCode);
 	
 	UBehavior* Parent = GetParentBehavior();
@@ -278,6 +284,7 @@ bool UBehavior::CanExecuteBehavior(const FBehaviorData& Behavior)
 					Behavior.MaxPerStage == 0));
 }
 
+// Custom
 void UBehavior::RunBehMove(FVector TargetLocation, float AcceptanceRadius)
 {
 	UBehMove* BehMove = Cast<UBehMove>(RunBehavior(UBehMove::StaticClass(), false));
@@ -285,3 +292,4 @@ void UBehavior::RunBehMove(FVector TargetLocation, float AcceptanceRadius)
 	BehMove->AcceptanceRadius = AcceptanceRadius;
 	BehMove->Ready();
 }
+// ~Custom

@@ -24,6 +24,14 @@ void ABehaviorOwner::BeginPlay()
 	Behavior->ReadyForActivation();
 }
 
+void ABehaviorOwner::Destroyed()
+{
+	Super::Destroyed();
+
+	if (Behavior)
+		Behavior->FinishBehavior(BR_Skipped);
+}
+
 void ABehaviorOwner::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);

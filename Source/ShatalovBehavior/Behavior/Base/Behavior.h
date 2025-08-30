@@ -9,14 +9,14 @@
 
 /**
  * \brief safe-delay for UBehavior
+ * \param TimerHandle FTimerHandle
  * \param DelayTime The delay time in seconds.
  * \param LambdaBody The code to execute. It can be a single expression (for example, `myFunction();`) or a block (`{ ... }`).
  */
-#define BehDelay(DelayTime, LambdaBody) \
+#define BehDelay(TimerHandle, DelayTime, LambdaBody) \
 		do { \
-			FTimerHandle TimerHandle; \
 			TWeakObjectPtr<std::decay<decltype(*this)>::type> WeakThis(this); \
-			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [&, WeakThis]() { \
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [=, this]() { \
 				if (WeakThis.IsValid()) \
 				{ \
 				LambdaBody; \
@@ -112,9 +112,9 @@ public:
 
 public:
 	UBehavior(const FObjectInitializer& ObjectInitializer);
-	virtual void Activate() override;
 	virtual void TickTask(float DeltaTime) override;
-	
+	virtual void Activate() override;
+
 public: // Blueprints
 	// Called when the task starts
 	UFUNCTION(BlueprintImplementableEvent, DisplayName="BehStart", Category = Behavior)

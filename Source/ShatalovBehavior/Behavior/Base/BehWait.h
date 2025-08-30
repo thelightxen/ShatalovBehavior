@@ -17,5 +17,7 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (ExposeOnSpawn="true"), DisplayName="WaitTime")
 		float m_fWaitTime = 5.f;
-	
+		
+protected:
+    FTimerHandle TimerHandle;
 };

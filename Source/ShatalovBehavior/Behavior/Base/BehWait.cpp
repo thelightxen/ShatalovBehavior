@@ -7,7 +7,7 @@ void UBehWait::Activate()
 {
 	Super::Activate();
 	
-	BehDelay(m_fWaitTime, {
+	BehDelay(TimerHandle, m_fWaitTime, {
 		FinishBehavior(BR_Success);
 	});
 }

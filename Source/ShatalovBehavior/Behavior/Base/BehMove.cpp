@@ -63,6 +63,9 @@ void UBehMove::OnBehaviorFinished_Implementation(EBehaviorResult Result, const F
 
 void UBehMove::OnMoveFinished(FAIRequestID RequestID, EPathFollowingResult::Type Result)
 {
+	if (GetParentBehavior())
+		GetParentBehavior()->OnMoveCompleted(Result);
+	
 	switch (Result)
 	{
 	case EPathFollowingResult::Success:

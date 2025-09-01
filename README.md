@@ -63,6 +63,7 @@ And unbind from delegates like this:
 ```cpp
 GetAIController()->ReceiveMoveCompleted.RemoveDynamic(this, &UBehMove::OnMoveFinished);
 ```
+> ##### Otherwise, this event will be called again later (even after the task is completed, or the level is changed).
 
 ## FinishBehavior with Result
 You can finish tasks with `Result` state and `FailedCode` to help you track their execution.

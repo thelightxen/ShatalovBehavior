@@ -21,6 +21,7 @@ The project includes a founder class (as AActor) and **UBehavior** itself.
 - **GetLastBehavior** - Returns the last Behavior (for example, if state is "BehMain -> BehAction -> BehAnim", the function will return a reference to BehAnim).
 - **GetBehaviorInQueue** - Get the next Behavior after finishing current.
 - **GetParallelBehaviors** - Get current parallel Behaviors.
+- **IsBehaviorValid** - Check if the Behavior is still active (not finished or pending kill).
 
 UBehavior also includes a **prioritization system**, where lower priority tasks are queued and high priority tasks overwrite other tasks.
 
@@ -30,6 +31,7 @@ UBehavior also includes a **prioritization system**, where lower priority tasks 
 
 # Documentation (WIP)
 ### Content:
+- [Validating Behaviors **(IMPORTANT)**](#validating-behaviors)
 - [Delays](#delays)
 - [Binding/Unbinding delegates](#bindingunbinding-delegates)
 - [FinishBehavior with Result](#finishbehavior-with-result)
@@ -37,6 +39,16 @@ UBehavior also includes a **prioritization system**, where lower priority tasks 
 - [Base tasks](#base-tasks)
 - [All `_Implementation` events](#all-_implementation-events)
 
+## Validating Behaviors
+If you are using Delegates, Tick or some other event that can be called after the task is finished - you need to **check** if the task is still active.
+
+Just put this condition at the beginning of your function:
+```cpp
+if (!IsBehaviorValid())
+	return;
+
+<code>
+```
 
 ## Delays
 For safe use of `GetWorldTimerManager()->SetTimer()` - use special macro **BehDelay();**

@@ -1,11 +1,11 @@
-﻿// (c) XenFFly
+// (c) XenFFly
 
 #include "Behavior.h"
 
+#include "BehAnim.h"
 #include "BehMove.h"
 #include "GameplayTasksComponent.h"
 #include "Kismet/KismetMathLibrary.h"
-
 
 DEFINE_LOG_CATEGORY(LogBehavior);
 
@@ -18,11 +18,12 @@ UBehavior::UBehavior(const FObjectInitializer& ObjectInitializer)
 void UBehavior::Activate()
 {
 	Super::Activate();
+
 	BehStart();
 
 	Behaviors.StableSort([](const FBehaviorData& Lhs, const FBehaviorData& Rhs) {
 		return Lhs.RandomWeight < Rhs.RandomWeight;
-	});
+		});
 }
 
 void UBehavior::TickTask(float DeltaTime)
@@ -30,15 +31,28 @@ void UBehavior::TickTask(float DeltaTime)
 	Super::TickTask(DeltaTime);
 	BehTick(DeltaTime);
 
+	if (!IsInterrupted() && m_bNeedToFinish)
+	{
+		EndTask();
+		m_bNeedToFinish = false;
+		return;
+	}
+
 	// Wait for behavior Queue
 	if (!IsInterrupted() && IsValid(TaskQueue))
 	{
-		if (GetChildBehavior() && TaskQueue->Priority > GetChildBehavior()->Priority)
+		if (TaskQueue->Type == BT_Base)
+		{
+			UBehavior* BehaviorBase = GetBehaviorOwner()->GetChildBehavior();
+			if (IsValid(BehaviorBase) && !BehaviorBase->IsFinished())
+				BehaviorBase->FinishBehavior(BR_Skipped, "OverrideTask");
+		}
+		else if (GetChildBehavior() && TaskQueue->Priority > GetChildBehavior()->Priority)
 			return;
-		
+
 		if (TaskQueue->GetState() == EGameplayTaskState::Uninitialized)
 		{
-			TaskQueue->InitTask(*this, TaskQueue->Priority);
+			TaskQueue->InitTask(TaskQueue->Type == BT_Base ? *GetBehaviorOwner() : *this, TaskQueue->Priority);
 			TaskQueue->ReadyForActivation();
 			TaskQueue = nullptr;
 		}
@@ -49,10 +63,16 @@ void UBehavior::TickTask(float DeltaTime)
 		// Reduce cooldown
 		for (int i = 0; i < Behaviors.Num(); i++)
 			Behaviors[i].CurrentCooldown = FMath::Clamp(Behaviors[i].CurrentCooldown - DeltaTime, 0.f, FLT_MAX);
-		
+
 		SelectBehavior();
 	}
 }
+
+/*void UBehavior::NotifyAnim_Implementation(const UNativeAnimNotify* AnimNotify, class UAnimSequenceBase* Animation)
+{
+	if (GetUsedActor())
+		Cast<AFlatActor>(GetUsedActor())->Notify(AnimNotify, Animation);
+}*/
 
 UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 {
@@ -61,9 +81,9 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 		UE_LOG(LogBehavior, Error, TEXT("Behavior is invalid: %s)."), *GetFullName());
 		return nullptr;
 	}
-	
+
 	UBehavior* BehNew = NewObject<UBehavior>(this, Behavior);
-	
+
 	switch (BehNew->Type)
 	{
 	case BT_Parallel:
@@ -72,33 +92,36 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 			BehNew->ReadyForActivation();
 		break;
 	case BT_Default:
-		if (!IsValid(GetChildBehavior()) || (!GetChildBehavior()->IsInterrupted() && BehNew->Priority <= GetChildBehavior()->Priority))
+		if (!IsValid(GetChildBehavior()) || BehNew->Priority <= GetChildBehavior()->Priority && !GetChildBehavior()->IsInterrupted())
 		{
-			if (IsValid(GetChildBehavior()))
+			if (IsValid(GetChildBehavior()) && !GetChildBehavior()->IsFinished())
 				GetChildBehavior()->FinishBehavior(BR_Skipped, "OverrideTask");
-			
+
 			BehNew->InitTask(*this, BehNew->Priority);
 			if (bReady)
 				BehNew->ReadyForActivation();
 		}
-		else if (IsValid(GetChildBehavior()) && (GetChildBehavior()->IsInterrupted() || BehNew->Priority < GetChildBehavior()->Priority))
+		else
+		{
+			if (TaskQueue) TaskQueue->MarkPendingKill();
 			TaskQueue = BehNew;
+		}
 		break;
 	case BT_Base:
 		if (!GetBehaviorOwner())
 			break;
-		
-		UBehavior* BehaviorBase = GetBehaviorOwner()->GetChildBehavior();
-		if (IsValid(BehaviorBase) && BehaviorBase->GetState() != EGameplayTaskState::Finished)
-			BehaviorBase->FinishBehavior(BR_Skipped, "OverrideTask");
-		
+
 		if (!IsInterrupted())
 		{
 			BehNew->InitTask(*GetBehaviorOwner(), BehNew->Priority);
 			if (bReady)
 				BehNew->ReadyForActivation();
 		}
-		else TaskQueue = BehNew;
+		else
+		{
+			if (TaskQueue) TaskQueue->MarkPendingKill();
+			TaskQueue = BehNew;
+		}
 		break;
 	}
 
@@ -107,13 +130,37 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 
 void UBehavior::FinishBehavior(TEnumAsByte<EBehaviorResult> Result, const FString& FailedCode)
 {
-	if (UWorld* World = GetWorld())
+	if (IsBehaviorValid())
 	{
-		World->GetTimerManager().ClearAllTimersForObject(this);
+		if (bIsFinishing)
+			return;
+
+		bIsFinishing = true;
+
+		// We finish child tasks ourselves, because we need to use FinishBehavior() instead EndTask() 
+		UBehavior* Child = GetChildBehavior();
+		if (IsValid(Child) && Child->IsBehaviorValid())
+		{
+			Child->FinishBehavior(BR_Skipped, "BehAbort");
+		}
+
+		FinishResult = Result;
+		FinishFailedCode = FailedCode;
+
+		if (IsInterrupted())
+		{
+			m_bNeedToFinish = true;
+			return;
+		}
+		else EndTask();
 	}
-	
+	else UE_LOG(LogBehavior, Warning, TEXT("The task is already finished or invalid: %s)."), *GetFullName());
+}
+
+void UBehavior::OnDestroy(bool bInOwnerFinished)
+{
 	OnBehaviorFinished(FinishResult, FinishFailedCode);
-	
+
 	UBehavior* Parent = GetParentBehavior();
 	if (IsValid(Parent))
 	{
@@ -136,25 +183,14 @@ void UBehavior::FinishBehavior(TEnumAsByte<EBehaviorResult> Result, const FStrin
 		}
 	}
 
-	UBehavior* Child = GetChildBehavior();
-	if (IsValid(Child))
-	{
-		Child->FinishBehavior(BR_Skipped, "BehAbort");
-	}
-	
-	if (IsValid(this) && GetState() != EGameplayTaskState::Finished)
-	{
-		FinishResult = Result;
-		FinishFailedCode = FailedCode;
-		EndTask();
-	}
-	else UE_LOG(LogBehavior, Warning, TEXT("The task is already finished or invalid: %s)."), *GetFullName());
+	if (IsBehaviorValid())
+		Super::OnDestroy(bInOwnerFinished);
 }
 
 void UBehavior::SetIsInterrupted(bool IsInterrupted)
 {
 	bIsInterrupted = IsInterrupted;
-	
+
 	if (IsValid(GetParentBehavior()))
 		GetParentBehavior()->SetIsInterrupted(IsInterrupted);
 }
@@ -163,14 +199,14 @@ TArray<FString> UBehavior::GetDebugHierarchi()
 {
 	if (IsPendingKill())
 		return {};
-	
+
 	TArray<FString> Result;
 	if (GetParentBehavior())
 		Result.Add(GetFName().GetPlainNameString());
 
 	if (Cast<UBehavior>(GetChildTask()))
 		Result.Append(Cast<UBehavior>(GetChildTask())->GetDebugHierarchi());
-	
+
 	return Result;
 }
 
@@ -204,6 +240,9 @@ UBehavior* UBehavior::GetLastBehavior()
 
 void UBehavior::Ready()
 {
+	if (IsInterrupted())
+		return;
+
 	if (GetState() == EGameplayTaskState::AwaitingActivation)
 		ReadyForActivation();
 	else UE_LOG(LogBehavior, Error, TEXT("Cannot set state: Ready (for %s)."), *GetFullName());
@@ -234,7 +273,7 @@ class AAIController* UBehavior::GetAIController()
 
 void UBehavior::SelectBehavior()
 {
-	if (Behaviors.Num() > 0 && !bSelectingTask && !IsValid(GetChildBehavior()))
+	if (IsBehaviorValid() && Behaviors.Num() > 0 && !bSelectingTask && !IsValid(GetChildBehavior()))
 	{
 		SelectedIndex = 0;
 		bSelectingTask = true;
@@ -258,7 +297,7 @@ void UBehavior::SelectBehavior()
 		{
 			if (!CanExecuteBehavior(Behaviors[i]))
 				continue;
-			
+
 			AccumulatedWeight += Behaviors[i].RandomWeight;
 			if (RandomPoint <= AccumulatedWeight)
 			{
@@ -281,7 +320,7 @@ void UBehavior::SelectBehavior()
 bool UBehavior::CanExecuteBehavior(const FBehaviorData& Behavior)
 {
 	return (Behavior.CurrentCooldown == 0.f && (Behavior.MaxPerStage != Behavior.CurrentPerStage ||
-					Behavior.MaxPerStage == 0));
+		Behavior.MaxPerStage == 0));
 }
 
 // Custom
@@ -292,4 +331,17 @@ void UBehavior::RunBehMove(FVector TargetLocation, float AcceptanceRadius)
 	BehMove->AcceptanceRadius = AcceptanceRadius;
 	BehMove->Ready();
 }
+
+UBehAnim* UBehavior::RunBehAnim(UAnimSequence* Animation, bool bLooping, bool bResetPose)
+{
+	UBehAnim* BehAnim = Cast<UBehAnim>(RunBehavior(UBehAnim::StaticClass(), false));
+	if (!BehAnim)
+		return nullptr;
+	BehAnim->Animation = Animation;
+	BehAnim->bLooping = bLooping;
+	BehAnim->bResetPose = bResetPose;
+	BehAnim->Ready();
+	return BehAnim;
+}
+
 // ~Custom

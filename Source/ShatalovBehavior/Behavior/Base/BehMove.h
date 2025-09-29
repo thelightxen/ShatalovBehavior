@@ -1,4 +1,4 @@
-// (c) XenFFly, MissingEntity
+// (c) XenFFly
 
 #pragma once
 
@@ -6,9 +6,6 @@
 #include "Behavior.h"
 #include "BehMove.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class SHATALOVBEHAVIOR_API UBehMove : public UBehavior
 {

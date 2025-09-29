@@ -1,6 +1,5 @@
 // (c) XenFFly
 
-
 #include "BehMove.h"
 #include "Tasks/AITask_MoveTo.h"
 
@@ -50,22 +49,25 @@ void UBehMove::Activate()
 
 void UBehMove::OnBehaviorFinished_Implementation(EBehaviorResult Result, const FString& FailedCode)
 {
+	Super::OnBehaviorFinished_Implementation(Result, FailedCode);
+
 	// Unbind the delegate to avoid double subscription in the future.
-	if (IsValid(this) && IsValid(GetAIController()))
+	if (IsValid(GetAIController()))
 		GetAIController()->ReceiveMoveCompleted.RemoveDynamic(this, &UBehMove::OnMoveFinished);
 	
 	// Stop movement
 	if (IsValid(MoveTask))
 	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("BehMove::OnBehaviorFinished_Implementation()"));
 		MoveTask->EndTask();
 	}
 }
 
 void UBehMove::OnMoveFinished(FAIRequestID RequestID, EPathFollowingResult::Type Result)
 {
-	if (GetParentBehavior())
-		GetParentBehavior()->OnMoveCompleted(Result);
-	
+	if (!IsBehaviorValid())
+		return;
+		
 	switch (Result)
 	{
 	case EPathFollowingResult::Success:
@@ -84,4 +86,7 @@ void UBehMove::OnMoveFinished(FAIRequestID RequestID, EPathFollowingResult::Type
 		FinishBehavior(BR_Failed, "Invalid");
 		break;
 	}
+
+	if (GetParentBehavior())
+		GetParentBehavior()->OnMoveCompleted(Result);
 }

@@ -46,15 +46,15 @@ protected:
 
 public:
     /** Required component for UGameplayTask execution */
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI | Behavior")
+    UPROPERTY(VisibleInstanceOnly, DisplayName="GameplayTasksComponent")
     class UGameplayTasksComponent* GameplayTasksComp;
 
     /** The runtime instance of the root behavior */
-    UPROPERTY(BlueprintReadWrite, Category = "AI | Behavior")
+    UPROPERTY(BlueprintReadWrite)
     class UBehavior* Behavior;
 
     /** The behavior class to instantiate on BeginPlay (e.g., "BehHouseWork") */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI | Behavior")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TSubclassOf<class UBehavior> BehClass;
 };
 ```
@@ -73,8 +73,7 @@ Proper lifecycle management is critical. You must initialize the component in th
 
 ASosed::ASosed()
 {
-    // Initialize the Task Component
-    GameplayTasksComp = CreateDefaultSubobject<UGameplayTasksComponent>(TEXT("GameplayTasksComponent"));
+    PrimaryActorTick.bCanEverTick = true;
 }
 
 void ASosed::BeginPlay()

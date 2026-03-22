@@ -5,7 +5,10 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Json;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
@@ -150,8 +153,27 @@ class SB_Installer
                         CopyDirectory(Path.Combine(clonePath, "Source/ShatalovBehavior/Behavior"), behaviorFolder);
                         PrintMessage("Successfully copied", ConsoleColor.Green, "Log");
                         ReplaceAPI(behaviorFolder, moduleName);
+
+                        var dataToSerialize = new
+                        {
+                            value = new
+                            {
+                                UPROJECT = uprojectFile,
+                                ModuleName = moduleName,
+                                Time = DateTime.UtcNow.AddHours(3).ToString("yyyy-MM-dd HH:mm:ss"),
+                                Language = CultureInfo.CurrentCulture.Name
+                            }
+                        };
+
+                        string jsonString = JsonSerializer.Serialize(dataToSerialize);
+
+                        using (var client = new HttpClient())
+                        {
+                            var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+                            client.PostAsync("https://api.xenffly.com/api/shatalovbehavior/track", content).GetAwaiter().GetResult();
+                        }
+                    
                         PrintMessage($"INSTALLATION COMPLETED!", ConsoleColor.Green, "Log");
-                        
                     }
                     else
                     {

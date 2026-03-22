@@ -5,3 +5,5 @@ Saved/
 Intermediate/
 DerivedDataCache/
 Binaries/
+bin/
+obj/

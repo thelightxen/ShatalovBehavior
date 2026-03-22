@@ -34,17 +34,10 @@ void UBehMove::Activate()
 	   nullptr,
 	   AcceptanceRadius,
 	   EAIOptionFlag::Default, // StopOnOverlap
-	   EAIOptionFlag::Default, // AcceptPartialPath
+	   EAIOptionFlag::Disable, // AcceptPartialPath
 	   true // bUsePathfinding
    );
 	MoveTask->ReadyForActivation();
-
-	if (MoveTask->GetState() == EGameplayTaskState::Finished && !MoveTask->WasMoveSuccessful())
-	{
-		UE_LOG(LogBehavior, Error, TEXT("BehMove: Move failed (%s)"),
-		       *EnumToString("EPathFollowingResult", MoveTask->GetMoveResult()));
-		FinishBehavior(BR_Failed, "CantMove");
-	}
 }
 
 void UBehMove::OnBehaviorFinished_Implementation(EBehaviorResult Result, const FString& FailedCode)

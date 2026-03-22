@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <UseWindowsForms>true</UseWindowsForms>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <ApplicationIcon>ShatalovBehavior.ico</ApplicationIcon>
+        <AssemblyName>SB Installer</AssemblyName>
+        <Company>XenFFly</Company>
+        <AssemblyVersion>1.0.0.0</AssemblyVersion>
+        <FileVersion>1.0.0.0</FileVersion>
+        <NeutralLanguage>en</NeutralLanguage>
+        <PublicSign>false</PublicSign>
+        <PackageId>SB_Installer</PackageId>
+        <Title>SB Installer</Title>
+        <Authors>XenFFly</Authors>
+        <Copyright>(c) XenFFly</Copyright>
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
+        <PublishSingleFile>true</PublishSingleFile>
+        <PublishTrimmed>false</PublishTrimmed>
+        <IsTrimmable>false</IsTrimmable>
+    </PropertyGroup>
+</Project>

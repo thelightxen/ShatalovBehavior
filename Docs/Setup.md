@@ -3,7 +3,7 @@
 Download the installer and follow its instructions.<br />
 After installation, rebuild your project.
 
-> <a href="https://gitlab.com/-/project/68916792/uploads/bb5e87b0de7701a0937466cbfcd5e23b/SB_Installer.exe">SB Installer.exe</a><br />
+> <a href="https://gitlab.com/-/project/68916792/uploads/b138da36e232cabe3a384b16afcf5453/SB_Installer.exe">SB Installer.exe</a><br />
 > <a href="https://gitlab.com/thelightxen/ShatalovBehavior/-/tree/main/Programs/SB_Installer">(cource code)</a>
 
 #  AI Character Integration

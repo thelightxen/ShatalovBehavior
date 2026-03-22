@@ -81,16 +81,17 @@ void ASosed::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (BehClass)
+    if (!GameplayTasksComp)
+	{
+		GameplayTasksComp = NewObject<UGameplayTasksComponent>(this, TEXT("GameplayTasksComponent"));
+		GameplayTasksComp->RegisterComponent();
+	}
+	Behavior = UBehavior::NewTask<UBehavior>(GameplayTasksComp);
+	Behavior->ReadyForActivation();
+    
+    if (BehClass && Behavior)
     {
-        // Instantiate the behavior via the ShatalovBehavior factory method
-        Behavior = UBehavior::NewTask<UBehavior>(GameplayTasksComp, BehClass);
-        
-        if (Behavior)
-        {
-            // Transitions the task from 'Uninitialized' to 'Active'
-            Behavior->ReadyForActivation();
-        }
+        Behavior->RunBehavior(BehClass, true);
     }
 }
 

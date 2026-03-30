@@ -6,7 +6,7 @@
 #include "Behavior.h"
 #include "BehAnim.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAnimationFinished, UAnimSequence*, Animation, bool, bFullPlayed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAnimationFinished, UAnimSequenceBase*, Animation, bool, bFullPlayed);
 
 UCLASS()
 class SHATALOVBEHAVIOR_API UBehAnim : public UBehavior
@@ -20,7 +20,7 @@ public:
 	UPROPERTY(BlueprintAssignable)
 		FOnAnimationFinished OnAnimationFinished;
 	
-	UAnimSequence* Animation;
+	UAnimSequenceBase* Animation;
 	bool bLooping;
 	bool bResetPose;
 

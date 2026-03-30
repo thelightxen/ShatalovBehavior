@@ -62,7 +62,7 @@ void UBehavior::TickTask(float DeltaTime)
 	{
 		// Reduce cooldown
 		for (int i = 0; i < Behaviors.Num(); i++)
-			Behaviors[i].CurrentCooldown = FMath::Clamp(Behaviors[i].CurrentCooldown - DeltaTime, 0.f, FLT_MAX);
+			Behaviors[i].CurrentCooldown = FMath::Clamp(Behaviors[i].CurrentCooldown - DeltaTime, 0.f, Behaviors[i].Cooldown);
 
 		SelectBehavior();
 	}
@@ -278,15 +278,21 @@ void UBehavior::SelectBehavior()
 		SelectedIndex = 0;
 		bSelectingTask = true;
 		float TotalWeight = 0.f;
+		TArray<bool> FailedBehaviors; 
 
 		// Sum weight
 		for (const FBehaviorData& BehData : Behaviors)
 			if (CanExecuteBehavior(BehData))
+				{
 				TotalWeight += BehData.RandomWeight;
+					FailedBehaviors.Add(false);
+				}
+			else FailedBehaviors.Add(true);
 
-		if (TotalWeight <= 0.f)
+		if (TotalWeight <= 0.f && !FailedBehaviors.Contains(true))
 		{
-			UE_LOG(LogBehavior, Warning, TEXT("All tasks have zero weight: %s"), *GetFullName());
+			UE_LOG(LogBehavior, Error, TEXT("All tasks have zero weight: %s"), *GetFullName());
+			GetParentBehavior()->FinishBehavior(BR_Failed, "BehBase_Failed_Weight=ZERO");
 			return;
 		}
 
@@ -312,6 +318,7 @@ void UBehavior::SelectBehavior()
 				return;
 			}
 		}
+		bSelectingTask = false;
 	}
 	else if (Behaviors.Num() == 0)
 		UE_LOG(LogBehavior, Error, TEXT("Behavior Type is BT_Base, but Behaviors array is empty: %s"), *GetFullName());
@@ -319,7 +326,7 @@ void UBehavior::SelectBehavior()
 
 bool UBehavior::CanExecuteBehavior(const FBehaviorData& Behavior)
 {
-	return (Behavior.CurrentCooldown == 0.f && (Behavior.MaxPerStage != Behavior.CurrentPerStage ||
+	return (Behavior.CurrentCooldown == 0.0f && (Behavior.MaxPerStage != Behavior.CurrentPerStage ||
 		Behavior.MaxPerStage == 0));
 }
 
@@ -332,7 +339,7 @@ void UBehavior::RunBehMove(FVector TargetLocation, float AcceptanceRadius)
 	BehMove->Ready();
 }
 
-UBehAnim* UBehavior::RunBehAnim(UAnimSequence* Animation, bool bLooping, bool bResetPose)
+UBehAnim* UBehavior::RunBehAnim(UAnimSequenceBase* Animation, bool bLooping, bool bResetPose)
 {
 	UBehAnim* BehAnim = Cast<UBehAnim>(RunBehavior(UBehAnim::StaticClass(), false));
 	if (!BehAnim)

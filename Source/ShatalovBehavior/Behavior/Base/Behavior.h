@@ -53,7 +53,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 MaxRandRepeat = 0;
 
+	UPROPERTY(BlueprintReadOnly)
 	int32 CurrentPerStage = 0;
+	
+	UPROPERTY(BlueprintReadOnly)
 	float CurrentCooldown = 0.f;
 
 	FBehaviorData() {};
@@ -238,7 +241,7 @@ public:
 	void RunBehMove(FVector TargetLocation, float AcceptanceRadius = 10.f);
 
 	UFUNCTION(BlueprintCallable)
-	UBehAnim* RunBehAnim(UAnimSequence* Animation, bool bLooping, bool bResetPose = true);
+	UBehAnim* RunBehAnim(UAnimSequenceBase* Animation, bool bLooping, bool bResetPose = true);
 
 	/*
 	* From HNCODE

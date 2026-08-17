@@ -37,6 +37,25 @@ void UBehavior::TickTask(float DeltaTime)
 		m_bNeedToFinish = false;
 		return;
 	}
+	
+	if (!IsInterrupted() && DelayedTasks.Num() > 0)
+	{
+		for (int i = 0; i < DelayedTasks.Num() ; i++)
+		{
+			FDelayedBehavior& DelayedBehavior = DelayedTasks[i];
+			DelayedBehavior.Time = FMath::Clamp(DelayedBehavior.Time - DeltaTime, 0.f, DelayedBehavior.Time);
+			
+			if (DelayedBehavior.Time <= 0 && !GetChildBehavior() && !IsValid(TaskQueue))
+			{
+				if (DelayedBehavior.Behavior && DelayedBehavior.Behavior->GetState() == EGameplayTaskState::Uninitialized)
+				{
+					DelayedBehavior.Behavior->InitTask(*this, DelayedBehavior.Behavior->Priority);
+					DelayedBehavior.Behavior->ReadyForActivation();
+					DelayedTasks.RemoveAt(i);
+				}
+			}
+		}
+	}
 
 	// Wait for behavior Queue
 	if (!IsInterrupted() && IsValid(TaskQueue))
@@ -128,6 +147,19 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 	return BehNew;
 }
 
+UBehavior* UBehavior::RunDelayedBehavior(TSubclassOf<UBehavior> Behavior, float Time)
+{
+	if (!IsValid(Behavior))
+	{
+		UE_LOG(LogBehavior, Error, TEXT("Behavior is invalid: %s)."), *GetFullName());
+		return nullptr;
+	}
+
+	UBehavior* BehNew = NewObject<UBehavior>(this, Behavior);
+	DelayedTasks.Add(FDelayedBehavior{BehNew, Time});
+	return BehNew;
+}
+
 void UBehavior::FinishBehavior(TEnumAsByte<EBehaviorResult> Result, const FString& FailedCode)
 {
 	if (IsBehaviorValid())
@@ -206,6 +238,10 @@ TArray<FString> UBehavior::GetDebugHierarchi()
 
 	if (Cast<UBehavior>(GetChildTask()))
 		Result.Append(Cast<UBehavior>(GetChildTask())->GetDebugHierarchi());
+	
+	if (!GetChildBehavior())
+		for (UBehavior* Parallel : GetParallelBehaviors())
+			Result.Add(Parallel->GetFName().GetPlainNameString());
 
 	return Result;
 }

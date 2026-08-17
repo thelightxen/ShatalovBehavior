@@ -26,6 +26,27 @@ enum EBehaviorResult
 };
 
 USTRUCT(BlueprintType)
+struct FDelayedBehavior
+{
+	GENERATED_BODY()
+	
+public:
+	UPROPERTY()
+	UBehavior* Behavior;
+	
+	UPROPERTY()
+	float Time;
+	
+	FDelayedBehavior() {};
+
+	FDelayedBehavior(UBehavior* InBehavior, float InTime)
+	{
+		Behavior = InBehavior;
+		Time = InTime;
+	}
+};
+
+USTRUCT(BlueprintType)
 struct FBehaviorData
 {
 	GENERATED_BODY()
@@ -92,6 +113,9 @@ public:
 
 	UPROPERTY()
 	UBehavior* TaskQueue;
+	
+	UPROPERTY()
+	TArray<FDelayedBehavior> DelayedTasks;
 
 	UPROPERTY()
 	bool bIsInterrupted;
@@ -139,6 +163,9 @@ public: // Blueprints
 public:
 	UFUNCTION(BlueprintCallable, Category = Behavior)
 	UBehavior* RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady = true);
+	
+	UFUNCTION(BlueprintCallable, Category = Behavior)
+	UBehavior* RunDelayedBehavior(TSubclassOf<UBehavior> Behavior, float Time);
 
 	UFUNCTION(BlueprintCallable, Category = Behavior)
 	void FinishBehavior(TEnumAsByte<EBehaviorResult> Result, const FString& FailedCode = "");

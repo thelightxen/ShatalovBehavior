@@ -107,10 +107,16 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	uint8 Priority = 127;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool bOneInstance;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Base, meta = (EditCondition = "Type==EBehaviorType::BT_Base"))
 	TArray<FBehaviorData> Behaviors;
-
+	
+	UPROPERTY()
+	TArray<TSubclassOf<UBehavior>> Instances;
+	
 	UPROPERTY()
 	UBehavior* TaskQueue;
 	
@@ -187,11 +193,22 @@ public:
 	UFUNCTION(BlueprintPure, Category = Behavior)
 	UBehavior* GetChildBehavior();
 
-	// Returns the first Behavior (for example, if state is "BehMain -> BehAction -> BehAnim", the function will return a reference to BehMain).
+	/* Returns the first/owner Behavior. 
+	 * For example, if state is "UBehavior (Core) -> BehMain -> BehAction -> BehAnim", the function will return a reference to UBehavior.
+	 */
 	UFUNCTION(BlueprintPure, Category = Behavior)
 	UBehavior* GetBehaviorOwner();
+	
+	/* Returns the Base Behavior after Owner. 
+	 * For example, if state is "UBehavior (Core) -> BehMain -> BehAction -> BehAnim", the function will return a reference to BehMain. 
+	 * Or returns nullptr if no Behavior Base.
+	 */
+	UFUNCTION(BlueprintPure, Category = Behavior)
+	UBehavior* GetBehaviorBase();
 
-	// Returns the last Behavior (for example, if state is "BehMain -> BehAction -> BehAnim", the function will return a reference to BehAnim).
+	/* Returns the last Behavior.
+	 * For example, if state is "UBehavior (Core) -> BehMain -> BehAction -> BehAnim", the function will return a reference to BehAnim.
+	 */
 	UFUNCTION(BlueprintCallable)
 	UBehavior* GetLastBehavior();
 

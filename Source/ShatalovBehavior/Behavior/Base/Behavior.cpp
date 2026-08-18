@@ -18,6 +18,9 @@ UBehavior::UBehavior(const FObjectInitializer& ObjectInitializer)
 void UBehavior::Activate()
 {
 	Super::Activate();
+	
+	if (GetBehaviorOwner() && bOneInstance)
+		GetBehaviorOwner()->Instances.Add(GetClass());
 
 	BehStart();
 
@@ -100,9 +103,12 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 		UE_LOG(LogBehavior, Error, TEXT("Behavior is invalid: %s)."), *GetFullName());
 		return nullptr;
 	}
+	
+	if (GetBehaviorOwner() && GetBehaviorOwner()->Instances.Contains(Behavior))
+		return nullptr;
 
 	UBehavior* BehNew = NewObject<UBehavior>(this, Behavior);
-
+	
 	switch (BehNew->Type)
 	{
 	case BT_Parallel:
@@ -117,6 +123,7 @@ UBehavior* UBehavior::RunBehavior(TSubclassOf<UBehavior> Behavior, bool bReady)
 				GetChildBehavior()->FinishBehavior(BR_Skipped, "OverrideTask");
 
 			BehNew->InitTask(*this, BehNew->Priority);
+				
 			if (bReady)
 				BehNew->ReadyForActivation();
 		}
@@ -192,6 +199,9 @@ void UBehavior::FinishBehavior(TEnumAsByte<EBehaviorResult> Result, const FStrin
 void UBehavior::OnDestroy(bool bInOwnerFinished)
 {
 	OnBehaviorFinished(FinishResult, FinishFailedCode);
+	
+	if (bOneInstance && GetBehaviorOwner() && GetBehaviorOwner()->Instances.Contains(GetClass()))
+		GetBehaviorOwner()->Instances.Remove(GetClass());
 
 	UBehavior* Parent = GetParentBehavior();
 	if (IsValid(Parent))
@@ -261,10 +271,22 @@ UBehavior* UBehavior::GetChildBehavior()
 UBehavior* UBehavior::GetBehaviorOwner()
 {
 	if (IsValid(GetParentBehavior()))
-		return GetParentBehavior();
-	else if (BehaviorIsOwnedByTasksComponent())
+		return GetParentBehavior()->GetBehaviorOwner();
+	 if (BehaviorIsOwnedByTasksComponent())
 		return this;
-	else return nullptr;
+	return nullptr;
+}
+
+UBehavior* UBehavior::GetBehaviorBase()
+{
+	if (IsValid(GetParentBehavior()))
+		return GetParentBehavior()->GetBehaviorBase();
+	
+	if (BehaviorIsOwnedByTasksComponent())
+		if (GetChildBehavior() && GetChildBehavior()->Type == BT_Base)
+			return GetChildBehavior();
+	
+	return nullptr;
 }
 
 UBehavior* UBehavior::GetLastBehavior()
